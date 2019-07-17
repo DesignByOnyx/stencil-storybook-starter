@@ -2,28 +2,13 @@ import path from 'path';
 import Case from 'case';
 import { storiesOf } from '@storybook/html';
 import * as KNOBS from '@storybook/addon-knobs';
-import { getRootFromPath, ensureProps } from './util';
-
-// The following paths must be configured for your project.
-// These can be configured to work with a monorepo too!
-
-// Must point to "loaders" which export the `defineCustomElements` method
-const stencilLoaders = require.context('../../loader/', true, /\/index.cjs.js/);
-// Must point to generated "collection" files. These files are compiled versions
-// of your components which contain necessary metadata about component properties.
-const stencilComponents = require.context('../../dist/collection', true, /\/components\/([^/]+)\/\1\.js$/);
-// Must point to story files for individual components: `<component>.story.ts`
-// const stencilStoryConfigs = require.context('../../src/components/', true, /\/.+\.story\.tsx$/);
-const stencilStoryConfigs = require.context('../../src', true, /\.story\.tsx$/);
 
 /*******************************************************************************
- * You should not need to edit anything below this line unless you really      *
+ * You should not need to edit anything within this file unless you really     *
  * want to get your hands dirty and customize the generation of stories.       *
- * If you configured the above require contexts, then you should be have       *
+ * If you configured the correct require contexts, then you should be have     *
  * a decently working storybook project which displays all of your components  *
- * with working knobs and different states. I apologize the following code was *
- * not written with the intent to be distributed. If I get time I will clean   *
- * it up and make it easier to read/customize.                                 *
+ * with working knobs and different states.                                    *
  *******************************************************************************/
 
 const DEFAULT_DATE = new Date();
@@ -216,7 +201,8 @@ function createStencilStory({ Component, notes, states, knobs }, stories) {
 					description,
 					tag,
 					props,
-				});
+        });
+
 				containerEl.querySelector(`.placeholder`).appendChild(componentEl);
 				mainEl.appendChild(containerEl);
 			});
@@ -239,107 +225,69 @@ function cleanNotes(notes) {
 	}
 }
 
+function buildGeneratorConfigs(componentsCtx, storiesCtx) {
+  const componentKeys = componentsCtx.keys();
+  const storyKeys = storiesCtx.keys();
+
+  return componentKeys.reduce((obj, compKey) => {
+    const _module = componentsCtx(compKey);
+    const Component = getComponentFromExports(_module);
+    const dirName = '/' + path.basename(path.dirname(compKey)) + '/';
+    const storyKey = storyKeys.find(k => k.indexOf(dirName) > -1);
+
+    if(storyKey) {
+      const _export = storiesCtx(storyKey).default;
+
+      // If the default export is a function, then that function should
+			// be used to create the story. It will be passed the "stories" object
+			// where it should call stories.add(...) manually.
+      if (typeof _export === 'function') {
+				return Object.assign(obj, {
+          [Component.name]: _export
+        });
+      }
+
+      return Object.assign(obj, {
+        [Component.name]: {
+          Component,
+          states: _export.states,
+          knobs: _export.knobs,
+          notes: cleanNotes(_export.notes),
+        }
+      });
+    }
+
+    return Object.assign(obj, {
+      [Component.name]: {
+        Component
+      }
+    });
+  }, {});
+}
+
 /**
  * Iterates all of the stencil contexts and build a "config" object
  * which is used to generate the individual stories.
  */
-function loadStencilStories() {
-	const pkgConfig = {};
-	const componentKeys = stencilComponents.keys();
+function buildStencilStories(name, loader, componentsCtx, storiesCtx) {
+	const configs = buildGeneratorConfigs(componentsCtx, storiesCtx);
 
 	// define the custom elements so they are available
-	stencilLoaders.keys().forEach(key => {
-		stencilLoaders(key).defineCustomElements(window);
-  });
+  loader.defineCustomElements(window);
 
-  console.log('PKGCONFIG 1', { ...pkgConfig });
+  const stories = storiesOf(name, module);
+  stories.addDecorator(KNOBS.withKnobs);
 
-	// update the pkgConfig to use the compiled component
-	componentKeys.reduce((obj, key) => {
-		const pkg = getRootFromPath(key);
-		const _module = stencilComponents(key);
-    const Component = getComponentFromExports(_module);
-
-		Object.assign(ensureProps(obj, pkg, Component.name), { Component });
-		return obj;
-  }, pkgConfig);
-
-  console.log('PKGCONFIG 2', { ...pkgConfig });
-
-	// get each components story config and merge onto pkgConfig
-	stencilStoryConfigs.keys().reduce((obj, key) => {
-		const pkg = getRootFromPath(key);
-		const _export = stencilStoryConfigs(key).default;
-		const parentName = path.basename(path.dirname(key));
-		const basename = path.basename(key).split('.story')[0];
-		const moduleName = parentName + '/' + basename + '.';
-		const componentKey = componentKeys.find(k => k.indexOf(moduleName) !== -1);
-
-		if (componentKey) {
-      const _module = stencilComponents(componentKey);
-      const Component = getComponentFromExports(_module);
-
-      console.log('-- custom story config for', pkg, Component.name);
-
-			// If the default export is a function, then that function should
-			// be used to create the story. It will be passed the "stories" object
-			// where it should call stories.add(...) manually.
-			if (typeof _export === 'function') {
-				Object.assign(ensureProps(obj, pkg, Component.name), _export);
-			} else {
-				let { states, knobs, notes } = _export;
-				Object.assign(ensureProps(obj, pkg, Component.name), {
-					states,
-					knobs,
-					notes: cleanNotes(notes),
-        });
-			}
-		}
-
-		return obj;
-  }, pkgConfig);
-
-  console.log('PKGCONFIG 3', { ...pkgConfig })
-
-  /**
-   * By the time we get here, the pkgConfig should be an
-   * object with the following shape:
-   *
-   * ```
-   * {
-   *    <GROUP_NAME>: {                   // The group under which components will be listed in storybook nav
-   *       // OPTION 1: a config object
-   *       <COMPONENT_NAME>: {            // The display name for the component (used in storybook nav)
-   *          Component: function() {},   // The component constructor (required)
-   *          states?: [],                // Optional list of different states to render (see examples)
-   *          knobs?: {},                 // Optional config for knobs used for each @Prop (see examples)
-   *          notes?: {},                 // Optional notes (markdown) to display for this component (see examples)
-   *       },
-   *
-   *       // OPTION 2: a function which calls stories.add() manually (see storybook docs)
-   *       <COMPONENT_NAME>: function(stories, knobs) { ... }
-   *    }
-   * }
-   * ```
-   */
-
-	// build stories for each pkg.Component
-	Object.keys(pkgConfig).forEach(pkg => {
-		const pkgTitle = Case.title(pkg);
-		const stories = storiesOf(pkgTitle, module);
-		stories.addDecorator(KNOBS.withKnobs);
-
-		Object.keys(pkgConfig[pkg])
-			.map(comp => pkgConfig[pkg][comp])
-			.forEach(config =>
-				typeof config === 'function'
-					? // If the config is a function, call it with the stories context.
-					  // The function is responsible for calling stories.add(...) manually.
-					  // Pass any additional utilities such as knobs.
-					  config(stories, KNOBS)
-					: createStencilStory(config, stories),
-			);
-	});
+  Object.keys(configs)
+    .map(comp => configs[comp])
+    .forEach(config =>
+      typeof config === 'function'
+        ? // If the config is a function, call it with the stories context.
+          // The function is responsible for calling stories.add(...) manually.
+          // Pass any additional utilities such as knobs.
+          config(stories, KNOBS)
+        : createStencilStory(config, stories),
+    );
 }
 
-export default loadStencilStories;
+export default buildStencilStories;
