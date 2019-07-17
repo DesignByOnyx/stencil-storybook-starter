@@ -1,0 +1,50 @@
+{
+  "name": "stencil-storybook-starter",
+  "version": "0.0.1",
+  "description": "Stencil Component Starter",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "es2015": "dist/esm/index.mjs",
+  "es2017": "dist/esm/index.mjs",
+  "types": "dist/types/index.d.ts",
+  "collection": "dist/collection/collection-manifest.json",
+  "collection:main": "dist/collection/index.js",
+  "unpkg": "dist/stencil-storybook-starter/stencil-storybook-starter.js",
+  "files": [
+    "dist/",
+    "loader/"
+  ],
+  "scripts": {
+    "build": "stencil build --docs",
+    "start": "stencil build --dev --watch --serve",
+    "test": "stencil test --spec --e2e",
+    "test.watch": "stencil test --spec --e2e --watchAll",
+    "watch": "stencil build --docs --watch",
+    "storybook.run": "start-storybook --port 9001",
+    "storybook": "npm-run-all --parallel watch storybook.run"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.5.4",
+    "@babel/preset-env": "^7.5.4",
+    "@babel/preset-typescript": "^7.3.3",
+    "@stencil/core": "^1.0.7",
+    "@storybook/addon-info": "^5.1.9",
+    "@storybook/addon-knobs": "^5.1.9",
+    "@storybook/addon-notes": "^5.1.9",
+    "@storybook/addon-viewport": "^5.1.9",
+    "@storybook/html": "^5.1.9",
+    "@types/jest": "^24.0.15",
+    "@types/storybook__addon-knobs": "^5.0.2",
+    "@types/storybook__html": "^5.0.2",
+    "awesome-typescript-loader": "^5.2.1",
+    "babel-loader": "^8.0.6",
+    "babel-plugin-dynamic-import-node": "^2.3.0",
+    "case": "^1.6.1",
+    "glob": "^7.1.4",
+    "npm-run-all": "^4.1.5",
+    "storybook": "^1.0.0",
+    "typescript": "^3.5.3",
+    "webpack": "^4.35.3"
+  },
+  "license": "MIT"
+}

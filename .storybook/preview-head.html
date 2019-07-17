@@ -1,0 +1,46 @@
+<!-- Unfortunately you must restart storybook if you make changes in here :( -->
+
+<style>
+.code-block {
+    margin: 1em 0;
+}
+.code-block pre {
+    margin-bottom: .1em;
+}
+.code-block pre code {
+    display: inline-block;
+    background-color: #eee;
+    border: 1px solid #bbb;
+    padding: .5em;
+    color: #555;
+}
+.code-block a {
+    color: #557799;
+    font-size: .8em;
+    cursor: pointer;
+}
+</style>
+
+<script>
+    window.addEventListener('DOMContentLoaded', () => {
+        // Selects code blocks when clicked
+        document.body.addEventListener('click', ({ target }) => {
+            if(target.matches('.select-code')) {
+                selectElementText(target.parentElement.querySelector('pre code'));
+            }
+        });
+        
+        function selectElementText(el) {
+            if (document.selection) { // IE
+                var range = document.body.createTextRange();
+                range.moveToElementText(el);
+                range.select();
+            } else if (window.getSelection) {
+                var range = document.createRange();
+                range.selectNode(el);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+            }
+        }
+    });
+</script>
