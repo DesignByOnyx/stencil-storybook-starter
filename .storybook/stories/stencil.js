@@ -58,7 +58,12 @@ function getKnobForProp(prop, knobOptions = {}) {
   }
 
   if(prop.defaultValue) {
-    args[1] = JSON.parse(prop.defaultValue)
+    try {
+      args[1] = JSON.parse(prop.defaultValue)
+    }
+    catch(e) {
+      args[1] = (typeof prop.defaultValue === 'string') ? prop.defaultValue : undefined;
+    }
   }
 
   console.log('generating', type, 'knob with args:', args);
@@ -117,7 +122,7 @@ function getStencilTemplate({ title, description, tag, props }) {
  * all the properties and default values.
  */
 function getPropsWithKnobValues(Component, knobOptions = {}) {
-	return Object.keys(Component.properties).reduce((obj, key) => {
+	return Object.keys(Component.properties || {}).reduce((obj, key) => {
 		const property = Component.properties[key];
 
 		// normalize older "attr" into newer "attribute" property
@@ -234,6 +239,11 @@ function buildGeneratorConfigs(componentsCtx, storiesCtx) {
     const Component = getComponentFromExports(_module);
     const dirName = '/' + path.basename(path.dirname(compKey)) + '/';
     const storyKey = storyKeys.find(k => k.indexOf(dirName) > -1);
+
+    if(!Component) {
+      console.warn(`Couldn't load component ${compKey}`);
+      return obj;
+    }
 
     if(storyKey) {
       const _export = storiesCtx(storyKey).default;
