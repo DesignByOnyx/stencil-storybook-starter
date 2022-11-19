@@ -32,7 +32,7 @@
     "@storybook/addon-knobs": "^5.1.9",
     "@storybook/addon-notes": "^5.1.9",
     "@storybook/addon-viewport": "^5.1.9",
-    "@storybook/html": "^5.1.9",
+    "@storybook/html": "^6.5.13",
     "@types/jest": "^24.0.15",
     "@types/storybook__addon-knobs": "^5.0.2",
     "@types/storybook__html": "^5.0.2",
